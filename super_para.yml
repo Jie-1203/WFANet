@@ -1,11 +1,9 @@
 lr_max:
   0.0009
 epochs:
-  # 360
-  0
+  360
 batch_size:
-  # 32
-  1
+  32
 ratio:
   2047.
 weight_decay:
