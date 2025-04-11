@@ -16,6 +16,70 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
+# A function to split the input data for inference. If your GPU memory is insufficient, it is recommended to use this function for testing. 
+def split_test(size, pad, main_folder, name, path):
+    global device, ratio
+    file_path = path
+    with h5py.File(file_path, 'r') as f:
+        datasets = f.keys()
+        for dataset_name in datasets:
+            dataset = f[dataset_name]
+            data = dataset[:]
+            if dataset_name == "pan":
+                test_pan = torch.from_numpy(np.array(data, dtype=np.float32)) / ratio
+            elif dataset_name == "ms":
+                test_ms = torch.from_numpy(np.array(data, dtype=np.float32)) / ratio
+            elif dataset_name == "lms":
+                test_lms = torch.from_numpy(np.array(data, dtype=np.float32)) / ratio
+    image_num, C, h, w = test_ms.shape
+    _, _, H, W = test_pan.shape
+    cut_size = size  # must be divided by 4, we recommend 64
+    ms_size = cut_size // 4
+    pad = pad  # must be divided by 4
+    edge_H = cut_size - (H - (H // cut_size) * cut_size)
+    edge_W = cut_size - (W - (W // cut_size) * cut_size)
+
+    new_folder_1 = os.path.join(main_folder, name)
+    os.makedirs(new_folder_1)
+    for k in range(image_num):
+        with torch.no_grad():
+            x1, x2, x3 = test_ms[k, :, :, :], test_pan[k, 0, :, :], test_lms[k, :, :, :]
+            x1 = x1.cpu().unsqueeze(dim=0).float()
+            x2 = x2.cpu().unsqueeze(dim=0).unsqueeze(dim=1).float()
+            x3 = x3.cpu().unsqueeze(dim=0).float()
+
+            x1_pad = torch.zeros(1, C, h + pad // 2 + edge_H // 4, w + pad // 2 + edge_W // 4)
+            x2_pad = torch.zeros(1, 1, H + pad * 2 + edge_H, W + pad * 2 + edge_W)
+            x3_pad = torch.zeros(1, C, H + pad * 2 + edge_H, W + pad * 2 + edge_W)
+            x1 = torch.nn.functional.pad(x1, (pad // 4, pad // 4, pad // 4, pad // 4), 'reflect')
+            x2 = torch.nn.functional.pad(x2, (pad, pad, pad, pad), 'reflect')
+            x3 = torch.nn.functional.pad(x3, (pad, pad, pad, pad), 'reflect')
+
+            x1_pad[:, :, :h + pad // 2, :w + pad // 2] = x1
+            x2_pad[:, :, :H + pad * 2, :W + pad * 2] = x2
+            x3_pad[:, :, :H + pad * 2, :W + pad * 2] = x3
+            output = torch.zeros(1, C, H + edge_H, W + edge_W)
+
+            scale_H = (H + edge_H) // cut_size
+            scale_W = (W + edge_W) // cut_size
+            for i in range(scale_H):
+                for j in range(scale_W):
+                    MS = x1_pad[:, :, i * ms_size: (i + 1) * ms_size + pad // 2,
+                         j * ms_size: (j + 1) * ms_size + pad // 2].to(device)
+                    PAN = x2_pad[:, :, i * cut_size: (i + 1) * cut_size + 2 * pad,
+                          j * cut_size: (j + 1) * cut_size + 2 * pad].to(device)
+                    LMS = x3_pad[:, :, i * cut_size: (i + 1) * cut_size + 2 * pad,
+                          j * cut_size: (j + 1) * cut_size + 2 * pad].to(device)
+                    sr = model(pan=PAN, ms=MS, lms=LMS)
+                    sr = torch.clamp(sr, 0, 1)
+                    output[:, :, i * cut_size: (i + 1) * cut_size, j * cut_size: (j + 1) * cut_size] = \
+                        sr[:, :, pad: cut_size + pad, pad: cut_size + pad] * ratio
+            output = output[:, :, :H, :W]
+            output = torch.squeeze(output).permute(1, 2, 0).cpu().detach().numpy()  # HxWxC
+            new_path = os.path.join(new_folder_1, f'output_mulExm_{k}.mat')
+            sio.savemat(new_path, {f'sr': output})
+        print(k)
+
 def learning_rate_function(x):
     return lr_max * math.exp((-1) * (math.log(2)) / 90 * x)
 
@@ -140,6 +204,10 @@ for batch_idx, (test_pan, test_gt, test_ms, test_lms) in enumerate(test_loader):
         print(f"Test set {batch_idx} loss: {loss}")
         test_loss.append(float(loss))
         sio.savemat(os.path.join("results", f'output_mulExm_{batch_idx}.mat'), {f'sr': output.squeeze(0).cpu().numpy().transpose((1, 2, 0)) * ratio})
+
+# A function to split the input data for inference. If your GPU memory is insufficient, it is recommended to use this function for testing. 
+# split_test(64, 4, os.getcwd(), "DatasetWV3'", "../../Dataset/WV3/test_wv3_multiExm1.h5")
+# split_test(128, 8, os.getcwd(), "DatasetWV3''", "../../Dataset/WV3/test_wv3_multiExm1.h5")
 
 loss_data = {"train_loss": all_loss, "train_time": end_time - start_time, 'test_loss': test_loss}
 with open(checkpoint_path, 'w') as file:
