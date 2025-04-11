@@ -328,7 +328,7 @@ class F_MWiT(nn.Module):
         x = self.resblock(x)
         return x
 
-
+# small scale
 class L_MWiT(nn.Module):
     def __init__(self, pan_ll_channel, L_up_channel, head_channel, dropout):
         super(L_MWiT, self).__init__()
@@ -402,3 +402,5 @@ class HWViT(nn.Module):
         back = self.reduce_channel(back_2)
         result = self.act_2(back + lms_1)
         return result
+
+
