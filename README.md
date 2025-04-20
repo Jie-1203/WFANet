@@ -1,4 +1,4 @@
-# Wavelet-Assisted Multi-Frequency Attention Network for Pansharpening [AAAI 2025]
+# [AAAI 2025] Wavelet-Assisted Multi-Frequency Attention Network for Pansharpening 
 
 <div style="text-align: center;">
   <a href="https://www.arxiv.org/">
@@ -51,10 +51,13 @@ Due to file size limitations and data security considerations, please contact us
 ## Citation
 
 If you find our paper useful, please consider citing the following:
-@article{huang2025wavelet,
+@inproceedings{huang2025wavelet,
   title={Wavelet-Assisted Multi-Frequency Attention Network for Pansharpening},
-  author={Huang, Jie and Huang, Rui and Xu, Jinghao and Pen, Siran and Duan, Yule and Deng, Liangjian},
-  journal={arXiv preprint arXiv:2502.04903},
+  author={Huang, Jie and Huang, Rui and Xu, Jinghao and Peng, Siran and Duan, Yule and Deng, Liang-Jian},
+  booktitle={Proceedings of the AAAI Conference on Artificial Intelligence},
+  volume={39},
+  number={4},
+  pages={3662--3670},
   year={2025}
 }
 
