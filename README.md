@@ -1,4 +1,4 @@
-# [AAAI 2025] Wavelet-Assisted Multi-Frequency Attention Network for Pansharpening 
+# [AAAI 2025 Oral] Wavelet-Assisted Multi-Frequency Attention Network for Pansharpening 
 
 <div style="text-align: center;">
   <a href="https://www.arxiv.org/">
